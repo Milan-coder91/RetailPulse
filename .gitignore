@@ -1,0 +1,34 @@
+.idea/
+.ipynb_checkpoints/
+__pycache__/
+.venv/
+venv/
+mlruns/
+mlflow.db
+*.pth
+# Dataset files
+*.csv
+
+# Python and environment files
+__pycache__/
+.venv/
+venv/
+
+# MLflow
+mlruns/
+mlflow.db
+*.pth
+airflow/.env
+airflow/logs/
+airflow/config/
+
+# Generated reports and model artifacts
+checkpoint/
+day7_checkpoint/
+day11_*.json
+day12_*.html
+day13_*.json
+day9_*.json
+
+airflow/dags/*_backup.py
+day11_validation_report.txt

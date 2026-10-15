@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+
+# Streamlit cache
+.streamlit/secrets.toml
+
+# MLflow
+mlruns/
+
+# Airflow
+airflow/logs/
+airflow/__pycache__/
+
+# Temporary files
+*.log
+*.tmp
+*.temp
+
+# Docker
+Dockerfile
+.dockerignore
