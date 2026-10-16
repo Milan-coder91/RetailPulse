@@ -12,15 +12,14 @@ st.title("Sales Analytics")
   #  r"C:\Users\milan\Downloads\archive (3)\retail_clean_dataset"
 #)
 
-BASE_PATH = Path(__file__).resolve().parent.parent.parent
-
-
-
-sales_path = BASE_PATH / "cleaned_sales_transactions.csv"
+sales_path = BASE_PATH / "cleaned_sales_transactions.zip"
 
 @st.cache_data
 def load_sales(path):
-    return pd.read_csv(path)
+    return pd.read_csv(
+        path,
+        compression="zip"
+    )
 
 sales = load_sales(sales_path)
 
