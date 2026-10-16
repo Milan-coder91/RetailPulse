@@ -136,6 +136,10 @@ daily_sales = (
 
 average_daily_sales = daily_sales.mean()
 
+if pd.isna(average_daily_sales) or average_daily_sales == 0:
+    st.error("Average daily sales calculate nahi ho pa rahi.")
+    st.stop()
+
 
 st.title("🚀 RetailPulse AI Analytics Platform")
 
