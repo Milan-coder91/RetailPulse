@@ -4,7 +4,11 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-st.set_page_config(page_title="Demand Forecasting", page_icon="📈", layout="wide")
+st.set_page_config(
+    page_title="Demand Forecasting",
+    page_icon="📈",
+    layout="wide"
+)
 
 st.title("Demand Forecasting")
 st.write("View historical demand, baseline forecasts, and demand scenarios.")
