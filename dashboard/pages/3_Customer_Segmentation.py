@@ -1,25 +1,93 @@
 
-
 import streamlit as st
 import pandas as pd
 from pathlib import Path
 
 # Customer Analytics Page
-
 st.title("Customer Segmentation")
 st.write("Explore customer behavior and purchasing patterns.")
 
-#BASE_PATH = Path(
-  #  r"C:\Users\milan\Downloads\archive (3)\retail_clean_dataset")
-
+# Project root directory
 BASE_PATH = Path(__file__).resolve().parent.parent.parent
 
-
-
+# Dataset paths
 customer_path = BASE_PATH / "cleaned_customer_master.csv"
+sales_path = BASE_PATH / "cleaned_sales_transactions.zip"
 
-customers = pd.read_csv(customer_path)
 
+# Load customer master CSV
+@st.cache_data
+def load_customers(path):
+    return pd.read_csv(path)
+
+
+# Load sales transactions from ZIP
+@st.cache_data
+def load_sales(path):
+    return pd.read_csv(
+        path,
+        compression="zip",
+        usecols=["customer_id", "date"]
+    )
+
+
+# Check that datasets exist
+if not customer_path.exists():
+    st.error(f"Customer dataset not found: {customer_path.name}")
+    st.stop()
+
+if not sales_path.exists():
+    st.error(f"Sales dataset not found: {sales_path.name}")
+    st.stop()
+
+
+# Load datasets
+try:
+    customers = load_customers(customer_path)
+    sales_data = load_sales(sales_path)
+except Exception as e:
+    st.error(f"Dataset loading failed: {e}")
+    st.stop()
+
+
+# Validate required columns
+required_customer_columns = ["cust_id", "loyalty_segment"]
+required_sales_columns = ["customer_id", "date"]
+
+missing_customer_columns = [
+    col for col in required_customer_columns
+    if col not in customers.columns
+]
+missing_sales_columns = [
+    col for col in required_sales_columns
+    if col not in sales_data.columns
+]
+
+if missing_customer_columns:
+    st.error(f"Customer CSV missing columns: {missing_customer_columns}")
+    st.stop()
+
+if missing_sales_columns:
+    st.error(f"Sales ZIP missing columns: {missing_sales_columns}")
+    st.stop()
+
+
+# Clean required fields
+customers = customers.dropna(subset=["cust_id"]).copy()
+sales_data["date"] = pd.to_datetime(
+    sales_data["date"],
+    errors="coerce"
+)
+sales_data = sales_data.dropna(
+    subset=["customer_id", "date"]
+).copy()
+
+st.success("Customer CSV and Sales ZIP loaded successfully.")
+
+
+# --------------------------------------------------
+# 1. CUSTOMER OVERVIEW
+# --------------------------------------------------
 st.subheader("Customer Overview")
 
 col1, col2, col3 = st.columns(3)
@@ -39,32 +107,23 @@ col3.metric(
     f"{len(customers):,}"
 )
 
-st.success("Customer master data loaded successfully.")
-
-st.dataframe(
-    customers.head(30),
-    width="stretch"
-)
+st.dataframe(customers.head(30), width="stretch")
 
 
-
+# --------------------------------------------------
+# 2. CUSTOMER SEGMENTATION
+# --------------------------------------------------
 st.subheader("Customer Segmentation")
 
 segment_summary = (
     customers["loyalty_segment"]
+    .fillna("Unknown")
     .value_counts()
-    .reset_index()
+    .rename_axis("Customer Segment")
+    .reset_index(name="Customer Count")
 )
 
-segment_summary.columns = [
-    "Customer Segment",
-    "Customer Count"
-]
-
-st.dataframe(
-    segment_summary,
-    width="stretch"
-)
+st.dataframe(segment_summary, width="stretch")
 
 st.bar_chart(
     segment_summary.set_index("Customer Segment")["Customer Count"],
@@ -73,20 +132,14 @@ st.bar_chart(
 )
 
 
-
+# --------------------------------------------------
+# 3. LAST PURCHASE AND CHURN RISK
+# --------------------------------------------------
 st.subheader("Churn Risk Analysis")
 
-sales_path = BASE_PATH / "cleaned_sales_transactions.zip"
-
-sales_data = pd.read_csv(
-    sales_path,
-    compression="zip",
-    usecols=["customer_id", "date"]
-)
-
-sales_data["date"] = pd.to_datetime(
-    sales_data["date"]
-)
+if sales_data.empty:
+    st.warning("No valid sales transactions are available for churn analysis.")
+    st.stop()
 
 last_purchase = (
     sales_data
@@ -112,22 +165,17 @@ last_purchase["churn_risk"] = pd.cut(
     labels=["Low", "Medium", "High"]
 )
 
+risk_order = ["Low", "Medium", "High"]
+
 risk_summary = (
     last_purchase["churn_risk"]
     .value_counts()
-    .reindex(["Low", "Medium", "High"], fill_value=0)
-    .reset_index()
+    .reindex(risk_order, fill_value=0)
+    .rename_axis("Churn Risk")
+    .reset_index(name="Customer Count")
 )
 
-risk_summary.columns = [
-    "Churn Risk",
-    "Customer Count"
-]
-
-st.dataframe(
-    risk_summary,
-    width="stretch"
-)
+st.dataframe(risk_summary, width="stretch")
 
 st.bar_chart(
     risk_summary.set_index("Churn Risk")["Customer Count"],
@@ -136,7 +184,9 @@ st.bar_chart(
 )
 
 
-
+# --------------------------------------------------
+# 4. CUSTOMER SEGMENT AND CHURN RISK
+# --------------------------------------------------
 st.subheader("Customer Segment and Churn Risk")
 
 customer_risk = customers[
@@ -150,24 +200,25 @@ customer_risk = customer_risk.merge(
     how="left"
 )
 
+# Customers without a matching sales record are not assigned
+# a churn category because their last purchase is unknown.
 segment_risk_summary = (
     customer_risk
     .groupby(
         ["loyalty_segment", "churn_risk"],
-        observed=True
+        observed=True,
+        dropna=False
     )
     .size()
     .reset_index(name="Customer Count")
 )
 
-st.dataframe(
-    segment_risk_summary,
-    width="stretch"
-)
+st.dataframe(segment_risk_summary, width="stretch")
 
 
-
-
+# --------------------------------------------------
+# 5. HIGH AND MEDIUM RISK CUSTOMER DETAILS
+# --------------------------------------------------
 st.subheader("Churn Risk Customer Details")
 
 risk_customers = customer_risk[
@@ -187,39 +238,44 @@ risk_customers = risk_customers.sort_values(
     ascending=False
 )
 
-st.dataframe(
-    risk_customers.head(30),
-    width="stretch"
-)
+st.dataframe(risk_customers.head(30), width="stretch")
 
 
+# --------------------------------------------------
+# 6. CHURN RISK SUMMARY
+# --------------------------------------------------
 st.subheader("Churn Risk Summary")
 
-total_customers = len(last_purchase)
+total_customers_with_sales = last_purchase["customer_id"].nunique()
 
 risk_summary["Risk Percentage"] = (
-    risk_summary["Customer Count"] / total_customers * 100
-).round(2)
-
-st.dataframe(
-    risk_summary,
-    width="stretch"
+    risk_summary["Customer Count"]
+    .div(max(total_customers_with_sales, 1))
+    .mul(100)
+    .round(2)
 )
 
+st.dataframe(risk_summary, width="stretch")
 
+
+# --------------------------------------------------
+# 7. CUSTOMER SEGMENT SUMMARY
+# --------------------------------------------------
 st.subheader("Customer Segmentation Summary")
 
 segment_summary["Customer Percentage"] = (
-    segment_summary["Customer Count"] / len(customers) * 100
-).round(2)
-
-st.dataframe(
-    segment_summary,
-    width="stretch"
+    segment_summary["Customer Count"]
+    .div(max(len(customers), 1))
+    .mul(100)
+    .round(2)
 )
 
+st.dataframe(segment_summary, width="stretch")
 
 
+# --------------------------------------------------
+# 8. CUSTOMER RISK OVERVIEW
+# --------------------------------------------------
 st.subheader("Customer Risk Overview")
 
 st.bar_chart(
@@ -229,17 +285,19 @@ st.bar_chart(
 )
 
 
-
+# --------------------------------------------------
+# 9. CUSTOMER ANALYTICS SUMMARY
+# --------------------------------------------------
 st.subheader("Customer Analytics Summary")
 
-high_risk_customers = (
+high_risk_customers = int(
     risk_summary.loc[
         risk_summary["Churn Risk"] == "High",
         "Customer Count"
     ].iloc[0]
 )
 
-medium_risk_customers = (
+medium_risk_customers = int(
     risk_summary.loc[
         risk_summary["Churn Risk"] == "Medium",
         "Customer Count"
@@ -250,7 +308,7 @@ col1, col2, col3 = st.columns(3)
 
 col1.metric(
     "Total Customers",
-    f"{len(customers):,}"
+    f"{customers['cust_id'].nunique():,}"
 )
 
 col2.metric(
@@ -263,31 +321,30 @@ col3.metric(
     f"{high_risk_customers:,}"
 )
 
-st.write(
-    f"**Medium Risk Customers:** {medium_risk_customers:,}"
-)
+st.write(f"**Medium Risk Customers:** {medium_risk_customers:,}")
 
 
-
+# --------------------------------------------------
+# 10. CUSTOMER ANALYTICS INSIGHTS
+# --------------------------------------------------
 st.subheader("Customer Analytics Insights")
 
 st.write(
-    f"Total customer base analyzed: **{len(customers):,} customers**."
+    f"Total customer base analyzed: "
+    f"**{customers['cust_id'].nunique():,} customers**."
 )
 
 st.write(
-    f"Customer base is divided into **"
-    f"{customers['loyalty_segment'].nunique()} loyalty segments**."
+    f"Customer base is divided into "
+    f"**{customers['loyalty_segment'].nunique()} loyalty segments**."
 )
 
 st.write(
-    f"High churn risk customers identified: **"
-    f"{high_risk_customers:,}**."
+    f"High churn risk customers identified: **{high_risk_customers:,}**."
 )
 
 st.write(
-    f"Medium churn risk customers identified: **"
-    f"{medium_risk_customers:,}**."
+    f"Medium churn risk customers identified: **{medium_risk_customers:,}**."
 )
 
 st.info(
