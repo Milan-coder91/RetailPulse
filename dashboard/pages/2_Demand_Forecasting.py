@@ -1,6 +1,6 @@
-
+from pathlib import Path
 import streamlit as st
-
+import pandas as pd
 # Demand Forecasting Page
 
 st.title("Demand Forecasting")
@@ -15,11 +15,6 @@ col2.metric("Forecast Status", "Ready for Integration")
 
 st.info("LSTM, Prophet, and Hybrid forecast data will be connected here.")
 
-
-# Day 16 - Step 1: Load Sales Data
-
-import pandas as pd
-from pathlib import Path
 
 #BASE_PATH = Path(
 #    r"C:\Users\milan\Downloads\archive (3)\retail_clean_dataset")
