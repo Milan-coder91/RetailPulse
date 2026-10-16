@@ -6,7 +6,7 @@ import pandas as pd
 st.set_page_config(page_title="Demand Forecasting", layout="wide")
 
 st.title("Demand Forecasting")
-st.write("RetailPulse — historical demand, baseline forecasting, and scenario analysis.")
+st.write("View future demand predictions for RetailPulse.")
 
 BASE_PATH = Path(__file__).resolve().parents[2]
 sales_path = BASE_PATH / "cleaned_sales_transactions.zip"
@@ -24,6 +24,7 @@ try:
     sales["date"] = pd.to_datetime(sales["date"], errors="coerce")
     sales["quantity"] = pd.to_numeric(sales["quantity"], errors="coerce")
     sales = sales.dropna(subset=["date", "quantity"])
+
 except Exception as e:
     st.error(f"Sales dataset load nahi hua: {e}")
     st.stop()
@@ -33,12 +34,7 @@ except Exception as e:
 st.subheader("Forecast Overview")
 col1, col2 = st.columns(2)
 col1.metric("Forecast Period", "30 Days")
-col2.metric("Forecast Method", "Baseline Average")
-
-st.info(
-    "Current forecast recent 30 days ki average daily demand par based hai. "
-    "Trained LSTM, Prophet, aur Hybrid model predictions abhi connected nahi hain."
-)
+col2.metric("Forecast Status", "Baseline Forecast Ready")
 
 st.success("Sales transaction data loaded successfully.")
 st.metric("Total Sales Records", f"{len(sales):,}")
@@ -73,8 +69,8 @@ st.line_chart(
 )
 
 
-# Step 3: Baseline 30-Day Forecast
-st.subheader("30-Day Baseline Forecast")
+# Step 3: 30-Day Baseline Forecast
+st.subheader("30-Day Forecast Overview")
 
 forecast_days = 30
 recent_demand = daily_demand["demand"].tail(30)
@@ -92,25 +88,17 @@ future_dates = pd.date_range(
     freq="D"
 )
 
-# Baseline forecast: recent 30-day average repeated for each future day
+# Baseline: recent 30-day average
 forecast = pd.DataFrame({
     "date": future_dates,
     "forecast_demand": [round(average_demand)] * forecast_days
 })
 
-st.caption(
-    "Method: recent 30 days ki average daily demand. "
-    "Yeh trained machine-learning model prediction nahi hai."
-)
-
-col1, col2 = st.columns(2)
-col1.metric("Average Daily Baseline", f"{average_demand:,.0f} units")
-col2.metric("Total 30-Day Baseline", f"{forecast['forecast_demand'].sum():,.0f} units")
-
+st.metric("Average Daily Forecast", f"{average_demand:,.0f}")
 st.line_chart(
     forecast.set_index("date")["forecast_demand"],
     x_label="Date",
-    y_label="Baseline Forecast (Units)"
+    y_label="Forecasted Demand"
 )
 
 st.dataframe(forecast, use_container_width=True)
@@ -140,41 +128,46 @@ st.line_chart(
         ["forecast_demand", "adjusted_demand"]
     ],
     x_label="Date",
-    y_label="Demand (Units)"
+    y_label="Demand"
 )
 
 st.dataframe(what_if_forecast, use_container_width=True)
 
 
 # Step 5: Forecast Summary
-st.subheader("Baseline Forecast Summary")
+st.subheader("Forecast Performance Summary")
 
 forecast_avg = forecast["forecast_demand"].mean()
 forecast_min = forecast["forecast_demand"].min()
 forecast_max = forecast["forecast_demand"].max()
+
+col1, col2, col3 = st.columns(3)
+col1.metric("30-Day Average Demand", f"{forecast_avg:,.0f}")
+col2.metric("Minimum Forecast", f"{forecast_min:,.0f}")
+col3.metric("Maximum Forecast", f"{forecast_max:,.0f}")
+
 total_forecast_demand = forecast["forecast_demand"].sum()
 adjusted_total = what_if_forecast["adjusted_demand"].sum()
 
-col1, col2, col3 = st.columns(3)
-col1.metric("Average Daily Demand", f"{forecast_avg:,.0f}")
-col2.metric("Minimum Daily Forecast", f"{forecast_min:,.0f}")
-col3.metric("Maximum Daily Forecast", f"{forecast_max:,.0f}")
-
-st.write(f"Baseline 30-day demand: **{total_forecast_demand:,.0f} units**.")
-st.write(f"Adjusted scenario demand: **{adjusted_total:,.0f} units**.")
-
-st.warning(
-    "Actual forecast accuracy, MAPE, and model performance are not displayed "
-    "because trained LSTM, Prophet, and Hybrid model outputs are not connected."
+st.write(
+    f"Expected demand over the next 30 days: "
+    f"**{total_forecast_demand:,.0f} units**."
+)
+st.write(
+    f"Average expected daily demand: **{forecast_avg:,.0f} units**."
+)
+st.info(
+    "This is a baseline forecast using the recent 30-day average, "
+    "not a trained LSTM, Prophet, or Hybrid model prediction."
 )
 
 
-# Step 6: RetailPulse Forecast Assistant
+# Step 6: RetailPulse Forecast Chatbot
 st.divider()
 st.header("RetailPulse Forecast Assistant")
-st.caption(
-    "Rule-based chatbot — answers using the sales and baseline forecast data "
-    "available on this page. It is not an external AI/LLM chatbot."
+st.write(
+    "Sales, demand forecast aur scenario analysis ke baare mein "
+    "apne questions poochho."
 )
 
 def answer_question(question):
@@ -183,58 +176,58 @@ def answer_question(question):
     if any(word in q for word in ["hello", "hi", "hey", "namaste"]):
         return (
             "Namaste bhai! Main RetailPulse Forecast Assistant hoon. "
-            "Main loaded sales data aur baseline forecast ke baare mein answer de sakta hoon."
+            "Sales aur demand forecast ke baare mein poochho."
         )
 
-    if any(word in q for word in ["lstm", "prophet", "hybrid", "model accuracy", "mape"]):
+    if "lstm" in q or "prophet" in q or "hybrid" in q:
         return (
-            "LSTM, Prophet, aur Hybrid model predictions abhi is dashboard se connected "
-            "nahi hain. Isliye main unki accuracy ya MAPE ka claim nahi kar sakta. "
-            "Abhi displayed forecast recent 30-day average par based hai."
+            "Is page par abhi LSTM, Prophet aur Hybrid models connected "
+            "nahi hain. Current displayed forecast recent 30-day average "
+            "par based baseline forecast hai."
         )
 
-    if any(word in q for word in ["record", "transaction", "sales data"]):
-        return f"Loaded dataset mein {len(sales):,} valid dated quantity records hain."
+    if "record" in q or "transaction" in q or "sales data" in q:
+        return f"Loaded sales dataset mein {len(sales):,} valid dated quantity records hain."
 
-    if any(word in q for word in ["historical", "past demand", "history"]):
+    if "historical" in q or "past demand" in q:
         return (
-            f"Historical daily demand {daily_demand['date'].min().date()} se "
-            f"{daily_demand['date'].max().date()} tak available hai. "
+            f"Historical daily demand {daily_demand['date'].min().date()} "
+            f"se {daily_demand['date'].max().date()} tak available hai. "
             f"Total daily observations: {len(daily_demand):,}."
         )
 
-    if any(word in q for word in ["adjust", "scenario", "what if", "what-if"]):
+    if "adjust" in q or "scenario" in q or "what if" in q:
         return (
             f"Current scenario adjustment {demand_change:+d}% hai. "
             f"Adjusted 30-day demand approximately {adjusted_total:,.0f} units hai."
         )
 
-    if any(word in q for word in ["minimum", "lowest"]):
-        return f"Minimum daily baseline forecast: {forecast_min:,.0f} units."
+    if "minimum" in q or "lowest" in q:
+        return f"Minimum daily demand forecast: {forecast_min:,.0f} units."
 
-    if any(word in q for word in ["maximum", "highest"]):
-        return f"Maximum daily baseline forecast: {forecast_max:,.0f} units."
+    if "maximum" in q or "highest" in q:
+        return f"Maximum daily demand forecast: {forecast_max:,.0f} units."
 
     if "average" in q or "daily demand" in q:
-        return f"Average baseline demand: {forecast_avg:,.0f} units per day."
+        return f"Average forecast demand: {forecast_avg:,.0f} units per day."
 
-    if any(word in q for word in ["total", "30 day", "30-day", "next month"]):
+    if "total" in q or "30 day" in q or "30-day" in q or "next month" in q:
         return (
             f"Next 30 days ka baseline forecast {total_forecast_demand:,.0f} units hai. "
             f"Current adjusted scenario {adjusted_total:,.0f} units hai."
         )
 
-    if any(word in q for word in ["inventory", "stock", "reorder"]):
+    if "inventory" in q or "stock" in q or "reorder" in q:
         return (
-            "Exact reorder recommendation ke liye current inventory aur supplier lead-time "
-            "data chahiye. Is page ke demand forecast se akela exact reorder quantity "
+            "Inventory recommendation ke liye current stock aur supplier lead-time "
+            "data bhi chahiye. Sirf demand forecast se exact reorder quantity "
             "confirm nahi ki ja sakti."
         )
 
     return (
-        "Main loaded sales data aur baseline forecast par answer de sakta hoon. "
-        "Try: average daily demand, total 30-day forecast, historical demand, "
-        "minimum forecast, maximum forecast, model accuracy, ya what-if scenario."
+        "Main abhi loaded sales data aur baseline forecast par answer de sakta hoon. "
+        "Try karo: average demand, total 30-day forecast, historical demand, "
+        "minimum forecast, maximum forecast, ya what-if scenario."
     )
 
 
@@ -246,7 +239,7 @@ for message in st.session_state.forecast_chat_history:
         st.markdown(message["content"])
 
 user_question = st.chat_input(
-    "Sales ya demand forecast ke baare mein poochho..."
+    "Ask about sales, demand, or the 30-day forecast..."
 )
 
 if user_question:
