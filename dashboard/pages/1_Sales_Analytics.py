@@ -11,8 +11,8 @@ st.title("Sales Analytics")
 #)
 
 BASE_PATH = Path(__file__).resolve().parents[2]
-     return pd.read_csv(path, compression="zip")
 
+sales_path = BASE_PATH / "cleaned_sales_transactions.zip"
 
 @st.cache_data
 def load_sales(path):
