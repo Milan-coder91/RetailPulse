@@ -1,9 +1,9 @@
 
-import streamlit as st
-import pandas as pd
-from pathlib import Path
 import plotly.express as px
 from pathlib import Path
+import pandas as pd
+import streamlit as st
+
 
 st.title("Sales Analytics")
 
@@ -20,7 +20,6 @@ def load_sales(path):
     return pd.read_csv(path, compression="zip")
 
 sales = load_sales(sales_path)
-
 
 # ---------------- SALES FILTERS ----------------
 st.sidebar.header("🔎 Sales Filters")
