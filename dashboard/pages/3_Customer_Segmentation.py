@@ -1,7 +1,5 @@
 
 
-# Day 17 - Step 1: Customer Data Overview
-
 import streamlit as st
 import pandas as pd
 from pathlib import Path
@@ -48,7 +46,7 @@ st.dataframe(
     width="stretch"
 )
 
-# Day 17 - Step 2: Customer Segmentation
+
 
 st.subheader("Customer Segmentation")
 
@@ -74,14 +72,15 @@ st.bar_chart(
     y_label="Customer Count"
 )
 
-# Day 17 - Step 3: Churn Risk Analysis
+
 
 st.subheader("Churn Risk Analysis")
 
-sales_path = BASE_PATH / "cleaned_sales_transactions.csv"
+sales_path = BASE_PATH / "cleaned_sales_transactions.zip"
 
 sales_data = pd.read_csv(
     sales_path,
+    compression="zip",
     usecols=["customer_id", "date"]
 )
 
@@ -136,7 +135,7 @@ st.bar_chart(
     y_label="Customer Count"
 )
 
-# Day 17 - Step 4: Customer Segment and Churn Risk
+
 
 st.subheader("Customer Segment and Churn Risk")
 
@@ -167,7 +166,7 @@ st.dataframe(
 )
 
 
-# Day 17 - Step 5: Churn Risk Customer Details
+
 
 st.subheader("Churn Risk Customer Details")
 
@@ -194,8 +193,6 @@ st.dataframe(
 )
 
 
-# Day 17 - Step 6: Churn Risk Summary
-
 st.subheader("Churn Risk Summary")
 
 total_customers = len(last_purchase)
@@ -209,7 +206,6 @@ st.dataframe(
     width="stretch"
 )
 
-# Day 17 - Step 7: Customer Segmentation Summary
 
 st.subheader("Customer Segmentation Summary")
 
@@ -222,7 +218,7 @@ st.dataframe(
     width="stretch"
 )
 
-# Day 17 - Step 8: Customer Risk Overview
+
 
 st.subheader("Customer Risk Overview")
 
@@ -232,7 +228,7 @@ st.bar_chart(
     y_label="Customer Percentage"
 )
 
-# Day 17 - Step 9: Customer Analytics Summary
+
 
 st.subheader("Customer Analytics Summary")
 
@@ -271,7 +267,7 @@ st.write(
     f"**Medium Risk Customers:** {medium_risk_customers:,}"
 )
 
-# Day 17 - Step 10: Customer Analytics Insights
+
 
 st.subheader("Customer Analytics Insights")
 
