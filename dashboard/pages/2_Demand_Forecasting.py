@@ -9,14 +9,9 @@ st.markdown(
     "View historical demand, baseline forecasts, and demand scenarios."
 )
 
-st.set_page_config(
-    page_title=" Demand Forecasting",
-    page_icon="📈",
     layout="wide"
-)
 
-st.title("Demand Forecasting")
-st.write("View historical demand, baseline forecasts, and demand scenarios.")
+
 
 BASE_PATH = Path(__file__).resolve().parents[2]
 sales_path = BASE_PATH / "cleaned_sales_transactions.zip"
