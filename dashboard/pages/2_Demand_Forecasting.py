@@ -26,11 +26,11 @@ from pathlib import Path
 BASE_PATH = Path(__file__).resolve().parent.parent.parent
 
 
-sales_path = BASE_PATH / "cleaned_sales_transactions.csv"
+sales_path = BASE_PATH / "cleaned_sales_transactions.zip"
 
 @st.cache_data
 def load_sales_data(path):
-    return pd.read_csv(path)
+    return pd.read_csv(path, compression="zip")
 
 sales = load_sales_data(sales_path)
 
