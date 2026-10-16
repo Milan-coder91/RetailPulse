@@ -77,6 +77,27 @@ st.sidebar.divider()
 BASE_PATH = Path(__file__).resolve().parent.parent
 
 sales_path = BASE_PATH / "cleaned_sales_transactions.zip"
+
+sales_data = pd.read_csv(
+    sales_path,
+    compression="zip",
+    usecols=[
+        "receipt_id",
+        "date",
+        "customer_id",
+        "sku_id",
+        "store_id",
+        "quantity",
+        "unit_price",
+        "discount",
+        "total_value",
+        "payment_method",
+        "promo_id",
+    ],
+)
+
+
+
 inventory_path = BASE_PATH / "cleaned_inventory_snapshot.csv"
 
 if not sales_path.exists():
