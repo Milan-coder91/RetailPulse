@@ -1,10 +1,8 @@
 
-
-# Step 24: Sales Analytics with Real Metrics
-
 import streamlit as st
 import pandas as pd
 from pathlib import Path
+import plotly.express as px
 
 st.title("Sales Analytics")
 
@@ -21,6 +19,123 @@ def load_sales(path):
     return pd.read_csv(path, compression="zip")
 
 sales = load_sales(sales_path)
+
+
+# ---------------- SALES FILTERS ----------------
+st.sidebar.header("🔎 Sales Filters")
+
+sales["date"] = pd.to_datetime(sales["date"], errors="coerce")
+sales = sales.dropna(subset=["date"])
+
+# Date filter
+min_date = sales["date"].min().date()
+max_date = sales["date"].max().date()
+
+date_range = st.sidebar.date_input(
+    "Select Date Range",
+    value=(min_date, max_date),
+    min_value=min_date,
+    max_value=max_date
+)
+
+filtered_sales = sales.copy()
+
+if isinstance(date_range, (tuple, list)) and len(date_range) == 2:
+    start_date, end_date = date_range
+    filtered_sales = filtered_sales[
+        filtered_sales["date"].dt.date.between(start_date, end_date)
+    ]
+
+# Channel filter
+if "channel" in filtered_sales.columns:
+    channels = sorted(
+        filtered_sales["channel"].dropna().astype(str).unique().tolist()
+    )
+    selected_channels = st.sidebar.multiselect(
+        "Sales Channel",
+        channels,
+        default=channels
+    )
+    filtered_sales = filtered_sales[
+        filtered_sales["channel"].astype(str).isin(selected_channels)
+    ]
+
+# Store filter
+if "store_id" in filtered_sales.columns:
+    stores = sorted(
+        filtered_sales["store_id"].dropna().astype(str).unique().tolist()
+    )
+    selected_stores = st.sidebar.multiselect(
+        "Store",
+        stores,
+        default=stores
+    )
+    filtered_sales = filtered_sales[
+        filtered_sales["store_id"].astype(str).isin(selected_stores)
+    ]
+
+# ---------------- FILTERED SALES KPIs ----------------
+st.subheader("📊 Filtered Sales Overview")
+
+c1, c2, c3 = st.columns(3)
+
+c1.metric("Transactions", f"{len(filtered_sales):,}")
+c2.metric(
+    "Units Sold",
+    f"{filtered_sales['quantity'].sum():,.0f}"
+)
+c3.metric(
+    "Total Sales",
+    f"₹{filtered_sales['total_value'].sum():,.2f}"
+)
+
+# ---------------- PIE & DONUT CHARTS ----------------
+chart_col1, chart_col2 = st.columns(2)
+
+with chart_col1:
+    st.subheader("🥧 Sales by Channel")
+
+    if "channel" in filtered_sales.columns and not filtered_sales.empty:
+        channel_sales = (
+            filtered_sales.groupby("channel", as_index=False)["total_value"]
+            .sum()
+        )
+
+        pie_fig = px.pie(
+            channel_sales,
+            names="channel",
+            values="total_value",
+            title="Revenue Share by Channel"
+        )
+        st.plotly_chart(pie_fig, use_container_width=True)
+    else:
+        st.info("Selected filters ke liye channel sales available nahi hain.")
+
+with chart_col2:
+    st.subheader("🍩 Sales by Store")
+
+    if "store_id" in filtered_sales.columns and not filtered_sales.empty:
+        store_sales = (
+            filtered_sales.groupby("store_id", as_index=False)["total_value"]
+            .sum()
+            .sort_values("total_value", ascending=False)
+            .head(8)
+        )
+
+        donut_fig = px.pie(
+            store_sales,
+            names="store_id",
+            values="total_value",
+            hole=0.55,
+            title="Revenue Share by Top 8 Stores"
+        )
+        st.plotly_chart(donut_fig, use_container_width=True)
+    else:
+        st.info("Selected filters ke liye store sales available nahi hain.")
+
+st.subheader("📋 Filtered Sales Data")
+st.dataframe(filtered_sales.head(500), use_container_width=True)
+
 
 
 total_sales = sales["total_value"].sum()
