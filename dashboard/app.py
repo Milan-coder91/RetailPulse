@@ -76,36 +76,27 @@ st.sidebar.divider()
 
 BASE_PATH = Path(__file__).resolve().parent.parent
 
+sales_path = BASE_PATH / "cleaned_sales_transactions.csv"
+inventory_path = BASE_PATH / "cleaned_inventory_snapshot.csv"
 
-sales_path = (
-    BASE_PATH /
-    "cleaned_sales_transactions.csv"
-)
+if not sales_path.exists():
+    st.error(f"Sales CSV missing: {sales_path}")
+    st.stop()
 
-inventory_path = (
-    BASE_PATH /
-    "cleaned_inventory_snapshot.csv"
-)
+if not inventory_path.exists():
+    st.error(f"Inventory CSV missing: {inventory_path}")
+    st.stop()
 
 sales_data = pd.read_csv(
     sales_path,
-    usecols=[
-        "receipt_id",
-        "date",
-        "quantity",
-        "total_value"
-    ]
+    usecols=["receipt_id", "date", "quantity", "total_value"]
 )
 
 inventory_data = pd.read_csv(
     inventory_path,
-    usecols=[
-        "sku_id",
-        "store_id",
-        "stock_on_hand",
-        "reorder_point"
-    ]
+    usecols=["sku_id", "store_id", "stock_on_hand", "reorder_point"]
 )
+
 
 
 sales_data["date"] = pd.to_datetime(
