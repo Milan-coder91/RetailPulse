@@ -76,7 +76,7 @@ st.sidebar.divider()
 
 BASE_PATH = Path(__file__).resolve().parent.parent
 
-sales_path = BASE_PATH / "cleaned_sales_transactions.csv"
+sales_path = BASE_PATH / "cleaned_sales_transactions.zip"
 inventory_path = BASE_PATH / "cleaned_inventory_snapshot.csv"
 
 if not sales_path.exists():
@@ -89,6 +89,7 @@ if not inventory_path.exists():
 
 sales_data = pd.read_csv(
     sales_path,
+    compression="zip",
     usecols=["receipt_id", "date", "quantity", "total_value"]
 )
 
