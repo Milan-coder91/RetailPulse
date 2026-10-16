@@ -1,6 +1,7 @@
 
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 from pathlib import Path
 
 st.set_page_config(
@@ -10,7 +11,7 @@ st.set_page_config(
 )
 
 st.title("👥 Customer Segmentation")
-st.write("Explore customer behavior, loyalty segments, and churn risk.")
+st.write("Explore customer behavior, loyalty segments, purchasing patterns, and churn risk.")
 
 # --------------------------------------------------
 # 1. PROJECT ROOT AND DATASET PATHS
@@ -38,7 +39,6 @@ def load_sales(path):
     )
 
 
-# Check files before loading
 if not customer_path.is_file():
     st.error(f"Customer CSV not found: {customer_path}")
     st.stop()
@@ -72,15 +72,11 @@ missing_sales_columns = [
 ]
 
 if missing_customer_columns:
-    st.error(
-        f"Customer CSV missing columns: {missing_customer_columns}"
-    )
+    st.error(f"Customer CSV missing columns: {missing_customer_columns}")
     st.stop()
 
 if missing_sales_columns:
-    st.error(
-        f"Sales ZIP missing columns: {missing_sales_columns}"
-    )
+    st.error(f"Sales ZIP missing columns: {missing_sales_columns}")
     st.stop()
 
 
@@ -90,17 +86,12 @@ if missing_sales_columns:
 customers = customers.copy()
 sales_data = sales_data.copy()
 
-# Normalize customer IDs so joins work consistently.
 customers["cust_id"] = (
-    customers["cust_id"]
-    .astype("string")
-    .str.strip()
+    customers["cust_id"].astype("string").str.strip()
 )
 
 sales_data["customer_id"] = (
-    sales_data["customer_id"]
-    .astype("string")
-    .str.strip()
+    sales_data["customer_id"].astype("string").str.strip()
 )
 
 customers = customers[
@@ -116,8 +107,7 @@ customers["loyalty_segment"] = (
 )
 
 sales_data["date"] = pd.to_datetime(
-    sales_data["date"],
-    errors="coerce"
+    sales_data["date"], errors="coerce"
 )
 
 sales_data = sales_data.dropna(
@@ -136,6 +126,10 @@ if customers.empty:
 if sales_data.empty:
     st.warning("No valid sales records found.")
     st.stop()
+
+# Use strings for consistent joins.
+customers["cust_id"] = customers["cust_id"].astype(str)
+sales_data["customer_id"] = sales_data["customer_id"].astype(str)
 
 st.success("Customer CSV and Sales ZIP loaded successfully.")
 
@@ -162,21 +156,21 @@ col3.metric(
     f"{len(customers):,}"
 )
 
-st.dataframe(customers.head(30), width="stretch")
+with st.expander("View Customer Data"):
+    st.dataframe(customers.head(30), use_container_width=True)
 
 
 # --------------------------------------------------
 # 6. CUSTOMER SEGMENTATION
 # --------------------------------------------------
+st.divider()
 st.subheader("Customer Segmentation")
 
 segment_summary = (
     customers.groupby("loyalty_segment")
     .size()
     .reset_index(name="Customer Count")
-    .rename(
-        columns={"loyalty_segment": "Customer Segment"}
-    )
+    .rename(columns={"loyalty_segment": "Customer Segment"})
     .sort_values("Customer Count", ascending=False)
 )
 
@@ -187,59 +181,205 @@ segment_summary["Customer Percentage"] = (
     .round(2)
 )
 
-st.dataframe(segment_summary, width="stretch")
+col1, col2 = st.columns(2)
 
-st.bar_chart(
-    segment_summary.set_index("Customer Segment")[
-        "Customer Count"
-    ],
-    x_label="Customer Segment",
-    y_label="Customer Count"
+with col1:
+    fig_bar = px.bar(
+        segment_summary,
+        x="Customer Segment",
+        y="Customer Count",
+        color="Customer Segment",
+        text="Customer Count",
+        title="Customers by Segment"
+    )
+    fig_bar.update_layout(showlegend=False)
+    st.plotly_chart(fig_bar, use_container_width=True)
+
+with col2:
+    fig_pie = px.pie(
+        segment_summary,
+        names="Customer Segment",
+        values="Customer Count",
+        title="Customer Segment Distribution"
+    )
+    st.plotly_chart(fig_pie, use_container_width=True)
+
+# Donut chart
+st.subheader("Customer Segment Share")
+
+fig_donut = px.pie(
+    segment_summary,
+    names="Customer Segment",
+    values="Customer Count",
+    hole=0.55,
+    title="Customer Loyalty Segment Share"
 )
+fig_donut.update_traces(textposition="inside", textinfo="percent+label")
+st.plotly_chart(fig_donut, use_container_width=True)
+
+with st.expander("View Segment Summary"):
+    st.dataframe(segment_summary, use_container_width=True)
 
 
 # --------------------------------------------------
-# 7. LAST PURCHASE AND CHURN RISK
+# 7. CUSTOMER PURCHASE METRICS
 # --------------------------------------------------
-st.subheader("Churn Risk Analysis")
+st.divider()
+st.subheader("Customer Purchase Behaviour")
 
-last_purchase = (
-    sales_data.groupby("customer_id")["date"]
-    .max()
+# One row per customer with purchase count and last purchase date.
+customer_purchase = (
+    sales_data.groupby("customer_id")
+    .agg(
+        purchase_frequency=("date", "size"),
+        last_purchase_date=("date", "max")
+    )
     .reset_index()
-    .rename(columns={"date": "last_purchase_date"})
 )
 
-# Use the latest available sales date as the analysis date.
 analysis_date = sales_data["date"].max()
 
-last_purchase["days_since_purchase"] = (
-    analysis_date - last_purchase["last_purchase_date"]
+customer_purchase["days_since_purchase"] = (
+    analysis_date - customer_purchase["last_purchase_date"]
 ).dt.days
 
-last_purchase["churn_risk"] = pd.cut(
-    last_purchase["days_since_purchase"],
-    bins=[-1, 90, 180, float("inf")],
-    labels=["Low", "Medium", "High"]
+customer_analysis = customers[
+    ["cust_id", "loyalty_segment"]
+].merge(
+    customer_purchase,
+    left_on="cust_id",
+    right_on="customer_id",
+    how="left"
 )
 
-risk_order = ["Low", "Medium", "High"]
+customer_analysis["purchase_frequency"] = (
+    customer_analysis["purchase_frequency"].fillna(0)
+)
+
+customer_analysis["days_since_purchase"] = (
+    customer_analysis["days_since_purchase"]
+)
+
+customer_analysis["customer_status"] = (
+    customer_analysis["last_purchase_date"]
+    .notna()
+    .map({True: "Has Sales", False: "No Sales Record"})
+)
+
+col1, col2, col3 = st.columns(3)
+
+col1.metric(
+    "Customers with Sales",
+    f"{customer_purchase['customer_id'].nunique():,}"
+)
+
+col2.metric(
+    "Average Purchase Records",
+    f"{customer_purchase['purchase_frequency'].mean():,.1f}"
+)
+
+col3.metric(
+    "Customers Without Sales",
+    f"{customer_analysis['last_purchase_date'].isna().sum():,}"
+)
+
+# Purchase frequency histogram
+fig_hist = px.histogram(
+    customer_analysis,
+    x="purchase_frequency",
+    color="loyalty_segment",
+    nbins=25,
+    title="Distribution of Purchase Frequency",
+    labels={
+        "purchase_frequency": "Number of Sales Records",
+        "loyalty_segment": "Customer Segment"
+    }
+)
+st.plotly_chart(fig_hist, use_container_width=True)
+
+# Scatter plot: purchase frequency vs recency
+scatter_data = customer_analysis.dropna(
+    subset=["days_since_purchase"]
+).copy()
+
+if not scatter_data.empty:
+    fig_scatter = px.scatter(
+        scatter_data,
+        x="purchase_frequency",
+        y="days_since_purchase",
+        color="loyalty_segment",
+        hover_data=["cust_id"],
+        title="Purchase Frequency vs Days Since Last Purchase",
+        labels={
+            "purchase_frequency": "Purchase Frequency (Sales Records)",
+            "days_since_purchase": "Days Since Last Purchase",
+            "loyalty_segment": "Customer Segment"
+        },
+        opacity=0.7
+    )
+    st.plotly_chart(fig_scatter, use_container_width=True)
+else:
+    st.info("Scatter plot requires customers with valid sales records.")
+
+st.caption(
+    "Purchase frequency represents the number of sales records per customer, "
+    "not necessarily the number of unique shopping visits."
+)
+
+
+# --------------------------------------------------
+# 8. LAST PURCHASE AND CHURN RISK
+# --------------------------------------------------
+st.divider()
+st.subheader("Churn Risk Analysis")
+
+last_purchase = customer_purchase[
+    ["customer_id", "last_purchase_date", "days_since_purchase"]
+].copy()
+
+
+def classify_risk(days):
+    if pd.isna(days):
+        return "Unknown"
+    if days <= 90:
+        return "Low"
+    if days <= 180:
+        return "Medium"
+    return "High"
+
+
+last_purchase["churn_risk"] = (
+    last_purchase["days_since_purchase"].apply(classify_risk)
+)
+
+risk_order = ["Low", "Medium", "High", "Unknown"]
+
+customer_risk = customers[
+    ["cust_id", "loyalty_segment"]
+].merge(
+    last_purchase,
+    left_on="cust_id",
+    right_on="customer_id",
+    how="left"
+)
+
+customer_risk["churn_risk"] = (
+    customer_risk["churn_risk"].fillna("Unknown")
+)
 
 risk_summary = (
-    last_purchase["churn_risk"]
+    customer_risk["churn_risk"]
     .value_counts()
     .reindex(risk_order, fill_value=0)
     .rename_axis("Churn Risk")
     .reset_index(name="Customer Count")
 )
 
-total_customers_with_sales = (
-    last_purchase["customer_id"].nunique()
-)
+total_customers = len(customer_risk)
 
 risk_summary["Risk Percentage"] = (
     risk_summary["Customer Count"]
-    .div(max(total_customers_with_sales, 1))
+    .div(max(total_customers, 1))
     .mul(100)
     .round(2)
 )
@@ -249,40 +389,47 @@ st.caption(
     "Risk is estimated using days since the latest recorded purchase."
 )
 
-st.dataframe(risk_summary, width="stretch")
+col1, col2 = st.columns(2)
 
-st.bar_chart(
-    risk_summary.set_index("Churn Risk")["Customer Count"],
-    x_label="Churn Risk",
-    y_label="Customer Count"
-)
+with col1:
+    fig_risk_bar = px.bar(
+        risk_summary,
+        x="Churn Risk",
+        y="Customer Count",
+        color="Churn Risk",
+        text="Customer Count",
+        title="Customers by Churn Risk",
+        category_orders={"Churn Risk": risk_order}
+    )
+    st.plotly_chart(fig_risk_bar, use_container_width=True)
+
+with col2:
+    fig_risk_donut = px.pie(
+        risk_summary,
+        names="Churn Risk",
+        values="Customer Count",
+        hole=0.5,
+        title="Churn Risk Distribution"
+    )
+    st.plotly_chart(fig_risk_donut, use_container_width=True)
+
+col1, col2, col3 = st.columns(3)
+
+risk_counts = risk_summary.set_index("Churn Risk")["Customer Count"]
+
+col1.metric("Low Risk", f"{int(risk_counts.get('Low', 0)):,}")
+col2.metric("Medium Risk", f"{int(risk_counts.get('Medium', 0)):,}")
+col3.metric("High Risk", f"{int(risk_counts.get('High', 0)):,}")
+
+with st.expander("View Risk Summary"):
+    st.dataframe(risk_summary, use_container_width=True)
 
 
 # --------------------------------------------------
-# 8. CUSTOMER SEGMENT AND CHURN RISK
+# 9. CUSTOMER SEGMENT AND CHURN RISK
 # --------------------------------------------------
-st.subheader("Customer Segment and Churn Risk")
-
-customer_risk = customers[
-    ["cust_id", "loyalty_segment"]
-].copy()
-
-customer_risk = customer_risk.merge(
-    last_purchase,
-    left_on="cust_id",
-    right_on="customer_id",
-    how="left"
-)
-
-# Customers with no matching sales record have unknown risk.
-customer_risk["churn_risk"] = (
-    customer_risk["churn_risk"].astype("object")
-)
-
-customer_risk.loc[
-    customer_risk["last_purchase_date"].isna(),
-    "churn_risk"
-] = "Unknown"
+st.divider()
+st.subheader("Customer Segment vs Churn Risk")
 
 segment_risk_summary = (
     customer_risk.groupby(
@@ -291,17 +438,31 @@ segment_risk_summary = (
     )
     .size()
     .reset_index(name="Customer Count")
-    .rename(
-        columns={"loyalty_segment": "Customer Segment"}
-    )
+    .rename(columns={"loyalty_segment": "Customer Segment"})
 )
 
-st.dataframe(segment_risk_summary, width="stretch")
+fig_segment_risk = px.bar(
+    segment_risk_summary,
+    x="Customer Segment",
+    y="Customer Count",
+    color="churn_risk",
+    barmode="group",
+    title="Churn Risk Across Loyalty Segments",
+    labels={
+        "loyalty_segment": "Customer Segment",
+        "churn_risk": "Churn Risk"
+    }
+)
+st.plotly_chart(fig_segment_risk, use_container_width=True)
+
+with st.expander("View Segment and Risk Table"):
+    st.dataframe(segment_risk_summary, use_container_width=True)
 
 
 # --------------------------------------------------
-# 9. MEDIUM AND HIGH RISK CUSTOMER DETAILS
+# 10. MEDIUM AND HIGH RISK CUSTOMER DETAILS
 # --------------------------------------------------
+st.divider()
 st.subheader("Churn Risk Customer Details")
 
 risk_customers = customer_risk[
@@ -318,111 +479,47 @@ risk_customers = customer_risk[
 
 risk_customers = risk_customers.sort_values(
     "days_since_purchase",
-    ascending=False
+    ascending=False,
+    na_position="last"
 )
 
 if risk_customers.empty:
     st.info("No medium- or high-risk customers were identified.")
 else:
     st.dataframe(
-        risk_customers.head(30),
-        width="stretch"
+        risk_customers.head(100),
+        use_container_width=True
     )
-
-
-# --------------------------------------------------
-# 10. CUSTOMER RISK OVERVIEW
-# --------------------------------------------------
-st.subheader("Customer Risk Overview")
-
-st.bar_chart(
-    risk_summary.set_index("Churn Risk")["Risk Percentage"],
-    x_label="Churn Risk",
-    y_label="Customers with Sales (%)"
-)
 
 
 # --------------------------------------------------
 # 11. CUSTOMER ANALYTICS SUMMARY
 # --------------------------------------------------
+st.divider()
 st.subheader("Customer Analytics Summary")
-
-risk_counts = risk_summary.set_index("Churn Risk")[
-    "Customer Count"
-]
 
 high_risk_customers = int(risk_counts.get("High", 0))
 medium_risk_customers = int(risk_counts.get("Medium", 0))
 low_risk_customers = int(risk_counts.get("Low", 0))
-
 customers_without_sales = int(
     customer_risk["last_purchase_date"].isna().sum()
 )
 
 col1, col2, col3 = st.columns(3)
 
-col1.metric(
-    "Total Customers",
-    f"{customers['cust_id'].nunique():,}"
-)
-
-col2.metric(
-    "Customer Segments",
-    f"{customers['loyalty_segment'].nunique():,}"
-)
-
-col3.metric(
-    "High Risk Customers",
-    f"{high_risk_customers:,}"
-)
+col1.metric("Total Customers", f"{customers['cust_id'].nunique():,}")
+col2.metric("Customer Segments", f"{customers['loyalty_segment'].nunique():,}")
+col3.metric("High Risk Customers", f"{high_risk_customers:,}")
 
 col1, col2, col3 = st.columns(3)
 
-col1.metric(
-    "Low Risk Customers",
-    f"{low_risk_customers:,}"
-)
-
-col2.metric(
-    "Medium Risk Customers",
-    f"{medium_risk_customers:,}"
-)
-
-col3.metric(
-    "Customers Without Sales",
-    f"{customers_without_sales:,}"
-)
-
-
-# --------------------------------------------------
-# 12. CUSTOMER ANALYTICS INSIGHTS
-# --------------------------------------------------
-st.subheader("Customer Analytics Insights")
-
-st.write(
-    f"Total customer base analyzed: "
-    f"**{customers['cust_id'].nunique():,} customers**."
-)
-
-st.write(
-    f"Number of loyalty segments: "
-    f"**{customers['loyalty_segment'].nunique()}**."
-)
-
-st.write(
-    f"High churn-risk customers: **{high_risk_customers:,}**."
-)
-
-st.write(
-    f"Medium churn-risk customers: **{medium_risk_customers:,}**."
-)
-
-st.write(
-    f"Low churn-risk customers: **{low_risk_customers:,}**."
-)
+col1.metric("Low Risk Customers", f"{low_risk_customers:,}")
+col2.metric("Medium Risk Customers", f"{medium_risk_customers:,}")
+col3.metric("Customers Without Sales", f"{customers_without_sales:,}")
 
 st.info(
-    "Churn risk is estimated from days since the latest recorded "
-    "purchase. These thresholds are analytical rules, not confirmed "
-    "predictions that a customer will leave."
+    "Churn risk is estimated from days since the latest recorded purchase. "
+    "Low risk: up to 90 days; Medium risk: 91–180 days; "
+    "High risk: more than 180 days. These are rule-based categories, "
+    "not predictions from a trained churn model."
 )
