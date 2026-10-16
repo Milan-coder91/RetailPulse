@@ -1,3 +1,4 @@
+
 import streamlit as st
 
 # Demand Forecasting Page
@@ -23,9 +24,7 @@ from pathlib import Path
 #BASE_PATH = Path(
 #    r"C:\Users\milan\Downloads\archive (3)\retail_clean_dataset")
 
-BASE_PATH = Path(__file__).resolve().parent.parent.parent
-
-
+BASE_PATH = Path(__file__).resolve().parents[2]
 sales_path = BASE_PATH / "cleaned_sales_transactions.zip"
 
 @st.cache_data
