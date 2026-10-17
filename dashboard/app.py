@@ -1290,3 +1290,183 @@ st.markdown(
     "All required report formats and download options "
     "have been configured successfully."
 )
+
+
+# ============================================================
+# RETAILPULSE ADDITIONS - PART 1
+# Data Freshness Indicator + Interactive Sales Trend
+# Paste at the END of your existing dashboard/app.py
+# ============================================================
+
+st.markdown("---")
+st.header("📅 Data Freshness Monitor")
+
+try:
+    latest_data_date = pd.to_datetime(latest_date, errors="coerce")
+
+    if pd.isna(latest_data_date):
+        st.warning("⚠️ Latest data date is unavailable.")
+
+    else:
+        today_date = pd.Timestamp.today().normalize()
+        latest_data_date = latest_data_date.normalize()
+
+        data_age_days = max(
+            0,
+            (today_date - latest_data_date).days
+        )
+
+        if data_age_days <= 2:
+            freshness_status = "Fresh"
+            freshness_message = "Data appears recent."
+        elif data_age_days <= 7:
+            freshness_status = "Slightly Delayed"
+            freshness_message = "Please review the data update schedule."
+        else:
+            freshness_status = "Historical / Stale"
+            freshness_message = "The dataset may need refreshing."
+
+        col1, col2, col3 = st.columns(3)
+
+        col1.metric(
+            "Latest Data Date",
+            latest_data_date.strftime("%d %b %Y")
+        )
+
+        col2.metric(
+            "Data Age",
+            f"{data_age_days} days"
+        )
+
+        col3.metric(
+            "Freshness Status",
+            freshness_status
+        )
+
+        if freshness_status == "Fresh":
+            st.success(f"✅ {freshness_message}")
+        elif freshness_status == "Slightly Delayed":
+            st.warning(f"⚠️ {freshness_message}")
+        else:
+            st.error(f"🚨 {freshness_message}")
+
+        st.caption(
+            "Note: This indicator uses the system date and the "
+            "latest date in your dataset. It does not confirm "
+            "that data is live."
+        )
+
+except Exception as e:
+    st.warning(f"Data freshness check could not complete: {e}")
+
+
+# ============================================================
+# INTERACTIVE SALES TREND
+# ============================================================
+
+st.markdown("---")
+st.header("📈 Interactive Sales Trend")
+
+try:
+    trend_days = st.selectbox(
+        "Select sales trend period",
+        [7, 14, 30, 90],
+        index=2,
+        format_func=lambda x: f"Last {x} days",
+        key="retailpulse_trend_days"
+    )
+
+    trend_data = daily_sales.copy()
+
+    trend_data.index = pd.to_datetime(
+        trend_data.index,
+        errors="coerce"
+    )
+
+    trend_data = trend_data[
+        trend_data.index.notna()
+    ].sort_index()
+
+    if not trend_data.empty:
+
+        trend_end = trend_data.index.max()
+        trend_start = (
+            trend_end - pd.Timedelta(days=trend_days - 1)
+        )
+
+        selected_trend = trend_data.loc[
+            trend_start:trend_end
+        ]
+
+        if not selected_trend.empty:
+
+            sales_column = (
+                "total_value"
+                if "total_value" in selected_trend.columns
+                else selected_trend.columns[0]
+            )
+
+            trend_values = pd.to_numeric(
+                selected_trend[sales_column],
+                errors="coerce"
+            ).dropna()
+
+            if not trend_values.empty:
+
+                col1, col2, col3 = st.columns(3)
+
+                col1.metric(
+                    "Total Sales",
+                    f"₹{trend_values.sum():,.2f}"
+                )
+
+                col2.metric(
+                    "Average Daily Sales",
+                    f"₹{trend_values.mean():,.2f}"
+                )
+
+                col3.metric(
+                    "Highest Daily Sales",
+                    f"₹{trend_values.max():,.2f}"
+                )
+
+                st.line_chart(
+                    trend_values,
+                    x_label="Date",
+                    y_label="Sales Value",
+                    height=350
+                )
+
+                trend_export = trend_values.rename(
+                    "total_value"
+                ).reset_index()
+
+                trend_export.columns = ["date", "total_value"]
+
+                st.download_button(
+                    label="⬇️ Download Sales Trend CSV",
+                    data=trend_export.to_csv(
+                        index=False
+                    ).encode("utf-8"),
+                    file_name="retailpulse_sales_trend.csv",
+                    mime="text/csv",
+                    key="retailpulse_trend_download"
+                )
+
+            else:
+                st.info(
+                    "Selected period has no valid sales values."
+                )
+
+        else:
+            st.info(
+                "Selected period has no sales records."
+            )
+
+    else:
+        st.info(
+            "Sales trend data is not available."
+        )
+
+except Exception as e:
+    st.warning(f"Sales trend could not be displayed: {e}")
