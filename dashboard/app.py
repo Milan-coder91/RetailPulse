@@ -1361,7 +1361,7 @@ except Exception as e:
 
 
 # ============================================================
-# INTERACTIVE SALES TREND
+# INTERACTIVE SALES TREND - FIXED
 # ============================================================
 
 st.markdown("---")
@@ -1376,6 +1376,7 @@ try:
         key="retailpulse_trend_days"
     )
 
+    # daily_sales is a Pandas Series, not a DataFrame
     trend_data = daily_sales.copy()
 
     trend_data.index = pd.to_datetime(
@@ -1388,79 +1389,67 @@ try:
     ].sort_index()
 
     if not trend_data.empty:
-
         trend_end = trend_data.index.max()
-        trend_start = (
-            trend_end - pd.Timedelta(days=trend_days - 1)
+
+        trend_start = trend_end - pd.Timedelta(
+            days=trend_days - 1
         )
 
         selected_trend = trend_data.loc[
             trend_start:trend_end
         ]
 
-        if not selected_trend.empty:
+        selected_trend = pd.to_numeric(
+            selected_trend,
+            errors="coerce"
+        ).dropna()
 
-            sales_column = (
-                "total_value"
-                if "total_value" in selected_trend.columns
-                else selected_trend.columns[0]
+        if not selected_trend.empty:
+            col1, col2, col3 = st.columns(3)
+
+            col1.metric(
+                "Total Sales",
+                f"₹{selected_trend.sum():,.2f}"
             )
 
-            trend_values = pd.to_numeric(
-                selected_trend[sales_column],
-                errors="coerce"
-            ).dropna()
+            col2.metric(
+                "Average Daily Sales",
+                f"₹{selected_trend.mean():,.2f}"
+            )
 
-            if not trend_values.empty:
+            col3.metric(
+                "Highest Daily Sales",
+                f"₹{selected_trend.max():,.2f}"
+            )
 
-                col1, col2, col3 = st.columns(3)
+            # Convert Series into DataFrame for chart and export
+            trend_chart_data = selected_trend.rename(
+                "Sales"
+            ).rename_axis("Date").reset_index()
 
-                col1.metric(
-                    "Total Sales",
-                    f"₹{trend_values.sum():,.2f}"
-                )
+            st.line_chart(
+                trend_chart_data.set_index("Date"),
+                y="Sales",
+                height=350
+            )
 
-                col2.metric(
-                    "Average Daily Sales",
-                    f"₹{trend_values.mean():,.2f}"
-                )
+            trend_export = selected_trend.rename(
+                "total_value"
+            ).rename_axis("date").reset_index()
 
-                col3.metric(
-                    "Highest Daily Sales",
-                    f"₹{trend_values.max():,.2f}"
-                )
-
-                st.line_chart(
-                    trend_values,
-                    x_label="Date",
-                    y_label="Sales Value",
-                    height=350
-                )
-
-                trend_export = trend_values.rename(
-                    "total_value"
-                ).reset_index()
-
-                trend_export.columns = ["date", "total_value"]
-
-                st.download_button(
-                    label="⬇️ Download Sales Trend CSV",
-                    data=trend_export.to_csv(
-                        index=False
-                    ).encode("utf-8"),
-                    file_name="retailpulse_sales_trend.csv",
-                    mime="text/csv",
-                    key="retailpulse_trend_download"
-                )
-
-            else:
-                st.info(
-                    "Selected period has no valid sales values."
-                )
+            st.download_button(
+                label="⬇️ Download Sales Trend CSV",
+                data=trend_export.to_csv(
+                    index=False
+                ).encode("utf-8"),
+                file_name="retailpulse_sales_trend.csv",
+                mime="text/csv",
+                key="retailpulse_trend_download"
+            )
 
         else:
             st.info(
-                "Selected period has no sales records."
+                "Selected period has no valid sales values."
             )
 
     else:
@@ -1469,4 +1458,6 @@ try:
         )
 
 except Exception as e:
-    st.warning(f"Sales trend could not be displayed: {e}")
+    st.warning(
+        f"Sales trend could not be displayed: {e}"
+    )
