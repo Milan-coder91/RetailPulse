@@ -1,95 +1,124 @@
-import streamlit as st
-import pandas as pd
-import plotly.express as px
-from pathlib import Path
-from io import BytesIO
-from datetime import datetime
+    ],
+    "Value": [
+        total_sales_latest, total_units_latest, total_orders_latest, low_stock_items,
+        average_daily_sales, f"{sales_difference_pct:+.2f}%", sales_alert_status,
+        inventory_alert_status, reorder_alert_status, high_priority_items,
+        medium_priority_items, low_priority_items, total_reorder_items,
+        float(daily_sales.tail(7).mean()) if not daily_sales.empty else 0,
+        f"{(((total_sales_latest - daily_sales.tail(7).mean()) / daily_sales.tail(7).mean()) * 100):+.2f}%" if not daily_sales.tail(7).empty and daily_sales.tail(7).mean() else "N/A",
+        critical_alerts, strong_alerts, normal_alerts
+    ]
+})
+alert_csv = alert_summary.to_csv(index=False).encode("utf-8")
+st.download_button(
+    label="🚨 Download Alert Summary (CSV)",
+    data=alert_csv,
+    file_name="retailpulse_alert_summary.csv",
+    mime="text/csv"
+)
 
-st.set_page_config(page_title="RetailPulse Dashboard", page_icon="📊", layout="wide")
+# PDF export remains an option inside the dashboard; this deliverable itself is a Python .py file.
+def create_pdf_report():
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.lib.enums import TA_CENTER
+    except ImportError:
+        return None
 
-st.markdown("""
-<style>
-[data-testid="stSidebarNav"] {display:none;}
-[data-testid="stSidebar"] .nav-title {font-size:18px;font-weight:700;margin-bottom:12px;}
-[data-testid="stSidebar"] .nav-item {padding:8px 4px;margin-bottom:4px;}
-</style>
-""", unsafe_allow_html=True)
+    buffer = BytesIO()
+    document = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)
+    styles = getSampleStyleSheet()
+    styles["Title"].alignment = TA_CENTER
+    story = [
+        Paragraph("RetailPulse AI Analytics Platform", styles["Title"]),
+        Paragraph("Metrics & Alert Report", styles["Heading2"]),
+        Spacer(1, 12),
+        Paragraph("Key Metrics", styles["Heading2"]),
+    ]
+    metrics_data = [
+        ["Metric", "Value"],
+        ["Latest Sales", f"INR {total_sales_latest:,.0f}"],
+        ["Units Sold", f"{total_units_latest:,.0f}"],
+        ["Orders", f"{total_orders_latest:,}"],
+        ["Low Stock Alerts", f"{low_stock_items:,}"],
+        ["Latest Sales Date", latest_date.strftime("%d %b %Y")],
+    ]
+    metrics_table = Table(metrics_data, colWidths=[250, 180])
+    metrics_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ("PADDING", (0, 0), (-1, -1), 6),
+    ]))
+    story.extend([metrics_table, Spacer(1, 15), Paragraph("Sales Performance Alert", styles["Heading2"])])
+    story.extend([
+        Paragraph(f"Average Daily Sales: INR {average_daily_sales:,.0f}", styles["Normal"]),
+        Paragraph(f"Sales Difference: {sales_difference_pct:+.2f}%", styles["Normal"]),
+        Paragraph(f"Sales Alert Status: {sales_alert_status}", styles["Normal"]),
+        Spacer(1, 15), Paragraph("Inventory & Reorder Alerts", styles["Heading2"]),
+    ])
+    alert_table_data = [
+        ["Alert Metric", "Value"],
+        ["Low Stock Items", f"{low_stock_items:,}"],
+        ["High Priority", f"{high_priority_items:,}"],
+        ["Medium Priority", f"{medium_priority_items:,}"],
+        ["Low Priority", f"{low_priority_items:,}"],
+        ["Total Replenishment Items", f"{total_reorder_items:,}"],
+    ]
+    alert_table = Table(alert_table_data, colWidths=[250, 180])
+    alert_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ("PADDING", (0, 0), (-1, -1), 6),
+    ]))
+    story.extend([alert_table, Spacer(1, 15), Paragraph("Final Alert Status", styles["Heading2"])])
+    story.extend([
+        Paragraph(f"Sales Status: {sales_alert_status}", styles["Normal"]),
+        Paragraph(f"Inventory Status: {inventory_alert_status}", styles["Normal"]),
+        Paragraph(f"Reorder Status: {reorder_alert_status}", styles["Normal"]),
+        Spacer(1, 10),
+        Paragraph("Report generated from the RetailPulse dashboard.", styles["Normal"]),
+    ])
+    document.build(story)
+    buffer.seek(0)
+    return buffer.getvalue()
 
-st.sidebar.markdown('<div class="nav-title">RetailPulse</div>', unsafe_allow_html=True)
-st.sidebar.page_link("app.py", label="Dashboard Overview", icon="🏠")
-st.sidebar.page_link("pages/1_Sales_Analytics.py", label="Sales Analytics", icon="📊")
-st.sidebar.page_link("pages/3_Customer_Segmentation.py", label="Customer Segmentation + Churn Risk", icon="👥")
-st.sidebar.page_link("pages/2_Demand_Forecasting.py", label="Demand Forecasting", icon="📈")
-st.sidebar.page_link("pages/4_Inventory_Optimization.py", label="Inventory Optimization", icon="📦")
-st.sidebar.divider()
+pdf_report = create_pdf_report()
+if pdf_report:
+    st.download_button(
+        label="📑 Download Business Report (PDF)",
+        data=pdf_report,
+        file_name="retailpulse_business_report.pdf",
+        mime="application/pdf"
+    )
+else:
+    st.info("PDF export needs ReportLab. Add 'reportlab' to requirements.txt to enable it.")
 
-# Project root when this file is dashboard/app.py
-BASE_PATH = Path(__file__).resolve().parent.parent
-sales_path = BASE_PATH / "cleaned_sales_transactions.zip"
-inventory_path = BASE_PATH / "cleaned_inventory_snapshot.csv"
+st.subheader("📊 Export Summary")
+export_summary = pd.DataFrame({
+    "Report": ["Sales Data", "Inventory & Reorder Data", "Alert Summary", "Business Report"],
+    "Format": ["CSV", "CSV", "CSV", "PDF"],
+    "Status": ["Available", "Available", "Available", "Available" if pdf_report else "Needs reportlab"],
+})
+st.dataframe(export_summary, use_container_width=True, hide_index=True)
 
-if not sales_path.exists():
-    st.error(f"Sales dataset missing: {sales_path}")
-    st.stop()
-if not inventory_path.exists():
-    st.error(f"Inventory dataset missing: {inventory_path}")
-    st.stop()
-
-@st.cache_data
-def load_sales(path):
-    return pd.read_csv(path, compression="zip", usecols=["receipt_id", "date", "quantity", "total_value"])
-
-@st.cache_data
-def load_inventory(path):
-    return pd.read_csv(path, usecols=["sku_id", "store_id", "stock_on_hand", "reorder_point"])
-
-try:
-    sales_data = load_sales(sales_path)
-    inventory_data = load_inventory(inventory_path)
-except Exception as error:
-    st.error(f"Unable to load dashboard data: {error}")
-    st.stop()
-
-sales_data["date"] = pd.to_datetime(sales_data["date"], errors="coerce")
-sales_data["quantity"] = pd.to_numeric(sales_data["quantity"], errors="coerce")
-sales_data["total_value"] = pd.to_numeric(sales_data["total_value"], errors="coerce")
-sales_data = sales_data.dropna(subset=["date", "quantity", "total_value"]).copy()
-for col in ["stock_on_hand", "reorder_point"]:
-    inventory_data[col] = pd.to_numeric(inventory_data[col], errors="coerce")
-inventory_data = inventory_data.dropna(subset=["stock_on_hand", "reorder_point"]).copy()
-
-if sales_data.empty:
-    st.error("Sales dataset contains no valid records.")
-    st.stop()
-
-latest_date = sales_data["date"].max()
-latest_sales = sales_data[sales_data["date"].dt.normalize() == latest_date.normalize()]
-total_sales_latest = latest_sales["total_value"].sum()
-total_units_latest = latest_sales["quantity"].sum()
-total_orders_latest = latest_sales["receipt_id"].nunique()
-low_stock_mask = inventory_data["stock_on_hand"] <= inventory_data["reorder_point"]
-low_stock_items = int(low_stock_mask.sum())
-daily_sales = sales_data.groupby(sales_data["date"].dt.normalize())["total_value"].sum().sort_index()
-average_daily_sales = daily_sales.mean()
-if pd.isna(average_daily_sales) or average_daily_sales == 0:
-    st.error("Average daily sales could not be calculated.")
-    st.stop()
-
-# Header
-st.title("🚀 RetailPulse AI Analytics Platform")
-st.header("📌 Overview")
-st.markdown("""**RetailPulse** is an AI-powered retail analytics platform designed to help businesses understand customers, forecast demand, manage inventory, and make data-driven decisions.""")
-
-col1, col2 = st.columns(2)
-with col1:
-    st.markdown("### 📈 Demand Forecasting")
-    st.write("30-day demand forecasting and scenario analysis. Check the Demand Forecasting page for the current model details.")
-    st.markdown("### 👥 Customer Analytics")
-    st.write("RFM analysis and customer segmentation using machine learning.")
-    st.markdown("### ⚠️ Churn Prediction")
-    st.write("Identify customers who may be at risk of churn.")
-with col2:
-    st.markdown("### 📦 Inventory Optimization")
-    st.write("Reorder recommendations and stock monitoring.")
-    st.markdown("### 📊 Business Intelligence")
-    st.write("Interactive analytics, KPIs, alerts and downloadable reports.")
+export_validation = {
+    "Sales CSV Export": len(sales_csv) > 0,
+    "Inventory CSV Export": len(inventory_csv) > 0,
+    "Alert Summary CSV Export": len(alert_csv) > 0,
+    "PDF Report Export": bool(pdf_report),
+    "Export Summary": len(export_summary) == 4,
+}
+passed_exports = sum(export_validation.values())
+total_exports = len(export_validation)
+st.subheader("✅ Export Functionality Validation")
+with st.expander("View export validation checks", expanded=False):
+    st.dataframe(pd.DataFrame({"Check": list(export_validation.keys()), "Passed": list(export_validation.values())}), use_container_width=True, hide_index=True)
+if passed_exports == total_exports:
+    st.success("All CSV and PDF export functions are ready.")
+else:
+    st.warning(f"{passed_exports}/{total_exports} export checks passed. If PDF is unavailable, install ReportLab to enable it.")
+st.success("RetailPulse export center is ready. Download sales, inventory, and alert CSVs from the buttons above.")
