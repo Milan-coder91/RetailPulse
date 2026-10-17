@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from pathlib import Path
-
+import altair as alt
 
 st.set_page_config(
     page_title="RetailPulse Dashboard",
@@ -1360,8 +1360,10 @@ except Exception as e:
     st.warning(f"Data freshness check could not complete: {e}")
 
 
+
 # ============================================================
-# INTERACTIVE SALES TREND - FIXED
+# INTERACTIVE SALES TREND - ENHANCED
+# Line Chart + Bar Chart + Area Chart + KPIs + Data Table + CSV
 # ============================================================
 
 st.markdown("---")
@@ -1376,7 +1378,7 @@ try:
         key="retailpulse_trend_days"
     )
 
-    # daily_sales is a Pandas Series, not a DataFrame
+    # daily_sales is a Pandas Series
     trend_data = daily_sales.copy()
 
     trend_data.index = pd.to_datetime(
@@ -1387,6 +1389,11 @@ try:
     trend_data = trend_data[
         trend_data.index.notna()
     ].sort_index()
+
+    trend_data = pd.to_numeric(
+        trend_data,
+        errors="coerce"
+    ).dropna()
 
     if not trend_data.empty:
         trend_end = trend_data.index.max()
@@ -1399,57 +1406,232 @@ try:
             trend_start:trend_end
         ]
 
-        selected_trend = pd.to_numeric(
-            selected_trend,
-            errors="coerce"
-        ).dropna()
-
         if not selected_trend.empty:
-            col1, col2, col3 = st.columns(3)
+
+            trend_chart_data = (
+                selected_trend.rename("Sales")
+                .rename_axis("Date")
+                .reset_index()
+            )
+
+            # ---------------- KPI METRICS ----------------
+            total_period_sales = selected_trend.sum()
+            average_period_sales = selected_trend.mean()
+            highest_day_sales = selected_trend.max()
+            lowest_day_sales = selected_trend.min()
+
+            peak_date = selected_trend.idxmax()
+
+            col1, col2 = st.columns(2)
+            col3, col4 = st.columns(2)
 
             col1.metric(
-                "Total Sales",
-                f"₹{selected_trend.sum():,.2f}"
+                "💰 Total Sales",
+                f"₹{total_period_sales:,.2f}"
             )
 
             col2.metric(
-                "Average Daily Sales",
-                f"₹{selected_trend.mean():,.2f}"
+                "📊 Average Daily Sales",
+                f"₹{average_period_sales:,.2f}"
             )
 
             col3.metric(
-                "Highest Daily Sales",
-                f"₹{selected_trend.max():,.2f}"
+                "🚀 Highest Daily Sales",
+                f"₹{highest_day_sales:,.2f}"
             )
 
-            # Convert Series into DataFrame for chart and export
-            trend_chart_data = selected_trend.rename(
-                "Sales"
-            ).rename_axis("Date").reset_index()
-
-            st.line_chart(
-                trend_chart_data.set_index("Date"),
-                y="Sales",
-                height=350
+            col4.metric(
+                "📉 Lowest Daily Sales",
+                f"₹{lowest_day_sales:,.2f}"
             )
 
-            trend_export = selected_trend.rename(
-                "total_value"
-            ).rename_axis("date").reset_index()
+            st.caption(
+                f"Peak sales date: {peak_date.strftime('%d %b %Y')} "
+                f"| Showing {len(selected_trend)} available daily records."
+            )
+
+            # ---------------- CHART SELECTOR ----------------
+            chart_type = st.radio(
+                "Choose chart type",
+                [
+                    "📈 Line Chart",
+                    "📊 Bar Chart",
+                    "🌊 Area Chart"
+                ],
+                horizontal=True,
+                key="retailpulse_chart_type"
+            )
+
+            if chart_type == "📈 Line Chart":
+
+                trend_chart = alt.Chart(
+                    trend_chart_data
+                ).mark_line(
+                    point=True
+                ).encode(
+                    x=alt.X(
+                        "Date:T",
+                        title="Date",
+                        axis=alt.Axis(
+                            format="%d %b",
+                            labelAngle=-45,
+                            tickCount="day"
+                        )
+                    ),
+                    y=alt.Y(
+                        "Sales:Q",
+                        title="Sales (₹)",
+                        axis=alt.Axis(format=",.0f")
+                    ),
+                    tooltip=[
+                        alt.Tooltip(
+                            "Date:T",
+                            title="Date",
+                            format="%d %b %Y"
+                        ),
+                        alt.Tooltip(
+                            "Sales:Q",
+                            title="Sales",
+                            format=",.2f"
+                        )
+                    ]
+                ).properties(
+                    height=380,
+                    title=f"Daily Sales Trend — Last {trend_days} Days"
+                ).interactive()
+
+                st.altair_chart(
+                    trend_chart,
+                    use_container_width=True
+                )
+
+            elif chart_type == "📊 Bar Chart":
+
+                trend_chart = alt.Chart(
+                    trend_chart_data
+                ).mark_bar().encode(
+                    x=alt.X(
+                        "Date:T",
+                        title="Date",
+                        axis=alt.Axis(
+                            format="%d %b",
+                            labelAngle=-45,
+                            tickCount="day"
+                        )
+                    ),
+                    y=alt.Y(
+                        "Sales:Q",
+                        title="Sales (₹)",
+                        axis=alt.Axis(format=",.0f")
+                    ),
+                    tooltip=[
+                        alt.Tooltip(
+                            "Date:T",
+                            title="Date",
+                            format="%d %b %Y"
+                        ),
+                        alt.Tooltip(
+                            "Sales:Q",
+                            title="Sales",
+                            format=",.2f"
+                        )
+                    ]
+                ).properties(
+                    height=380,
+                    title=f"Daily Sales Comparison — Last {trend_days} Days"
+                ).interactive()
+
+                st.altair_chart(
+                    trend_chart,
+                    use_container_width=True
+                )
+
+            else:
+
+                trend_chart = alt.Chart(
+                    trend_chart_data
+                ).mark_area(
+                    opacity=0.55,
+                    line=True
+                ).encode(
+                    x=alt.X(
+                        "Date:T",
+                        title="Date",
+                        axis=alt.Axis(
+                            format="%d %b",
+                            labelAngle=-45,
+                            tickCount="day"
+                        )
+                    ),
+                    y=alt.Y(
+                        "Sales:Q",
+                        title="Sales (₹)",
+                        axis=alt.Axis(format=",.0f")
+                    ),
+                    tooltip=[
+                        alt.Tooltip(
+                            "Date:T",
+                            title="Date",
+                            format="%d %b %Y"
+                        ),
+                        alt.Tooltip(
+                            "Sales:Q",
+                            title="Sales",
+                            format=",.2f"
+                        )
+                    ]
+                ).properties(
+                    height=380,
+                    title=f"Sales Area Trend — Last {trend_days} Days"
+                ).interactive()
+
+                st.altair_chart(
+                    trend_chart,
+                    use_container_width=True
+                )
+
+            # ---------------- DATA TABLE ----------------
+            with st.expander("📋 View Daily Sales Data"):
+                display_data = trend_chart_data.copy()
+
+                display_data["Date"] = (
+                    pd.to_datetime(display_data["Date"])
+                    .dt.strftime("%d %b %Y")
+                )
+
+                display_data["Sales"] = (
+                    display_data["Sales"].map(
+                        lambda value: f"₹{value:,.2f}"
+                    )
+                )
+
+                st.dataframe(
+                    display_data,
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+            # ---------------- CSV DOWNLOAD ----------------
+            trend_export = trend_chart_data.copy()
+
+            trend_export["Date"] = (
+                pd.to_datetime(trend_export["Date"])
+                .dt.strftime("%Y-%m-%d")
+            )
 
             st.download_button(
                 label="⬇️ Download Sales Trend CSV",
                 data=trend_export.to_csv(
                     index=False
                 ).encode("utf-8"),
-                file_name="retailpulse_sales_trend.csv",
+                file_name=f"retailpulse_sales_trend_{trend_days}_days.csv",
                 mime="text/csv",
                 key="retailpulse_trend_download"
             )
 
         else:
             st.info(
-                "Selected period has no valid sales values."
+                "Selected period has no valid sales records."
             )
 
     else:
@@ -1458,6 +1640,6 @@ try:
         )
 
 except Exception as e:
-    st.warning(
+    st.error(
         f"Sales trend could not be displayed: {e}"
     )
