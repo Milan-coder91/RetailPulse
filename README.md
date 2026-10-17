@@ -1,5 +1,9 @@
 # RetailPulse – AI-Powered Customer Analytics & Demand Forecasting Platform
 
+**Live Application:** [Open RetailPulse Dashboard](https://retailpulse-aoixermxuqugnpwvtchc5y.streamlit.app/)
+
+**GitHub Repository:** [Milan-coder91/RetailPulse](https://github.com/Milan-coder91/RetailPulse)
+
 RetailPulse is a data science and analytics project designed to analyze retail sales, understand customer behavior, forecast product demand, and support inventory optimization through data-driven insights.
 
 The project combines data analysis, machine learning, time-series forecasting, interactive dashboards, workflow automation, containerization, cloud deployment, and monitoring into a structured 28-day development workflow.
@@ -17,27 +21,35 @@ The project combines data analysis, machine learning, time-series forecasting, i
 ## Key Features
 
 ### 1. Sales Analytics
+
 Analyze sales trends, revenue patterns, product performance, and business KPIs to support data-driven decisions.
 
 ### 2. Demand Forecasting
+
 Use forecasting approaches such as Prophet and LSTM to study historical demand and estimate future sales or demand.
 
 ### 3. Customer Segmentation
+
 Apply RFM analysis and customer segmentation techniques to understand customer purchasing patterns and identify meaningful customer groups.
 
 ### 4. Inventory Optimization
+
 Analyze inventory snapshots, product availability, and stock-related indicators to support inventory planning.
 
 ### 5. Machine Learning and Model Evaluation
+
 Evaluate forecasting and predictive models using suitable metrics such as MAE, RMSE, and MAPE.
 
 ### 6. Interactive Dashboard
+
 Use Streamlit to present sales analytics, demand forecasts, customer segmentation, and inventory insights.
 
 ### 7. Experiment Tracking and Automation
+
 Use MLflow for experiment tracking and Apache Airflow for workflow orchestration and model retraining automation.
 
 ### 8. DevOps and Deployment
+
 Prepare Docker and Kubernetes configurations, automate code checks using GitHub Actions, and plan cloud deployment and monitoring.
 
 ## Technology Stack
@@ -53,23 +65,21 @@ Prepare Docker and Kubernetes configurations, automate code checks using GitHub 
 - **Containerization:** Docker
 - **Orchestration:** Kubernetes
 - **CI/CD:** GitHub Actions
-- **Cloud Platform:** AWS or Google Cloud Platform (GCP)
+- **Cloud Deployment:** Streamlit Community Cloud
 - **Monitoring:** Prometheus and Grafana
 - **Version Control:** Git and GitHub
 
 ## Dataset Overview
 
-The project uses retail datasets to analyze sales, customers, products, inventory, stores, and promotions.
-
-| Dataset | Purpose |
-|---|---|
-| `sales_transactions.csv` | Analyze sales transactions and revenue |
-| `customer_master.csv` | Study customer information and behavior |
-| `sku_master.csv` | Analyze product and SKU information |
-| `store_master.csv` | Understand store-level information |
-| `inventory_snapshot.csv` | Analyze inventory levels and availability |
-| `promotions.csv` | Study promotional activities |
-| `sku_inventory_flags.csv` | Support inventory-related analysis |
+| Dataset                   | Purpose                                   |
+| ------------------------- | ----------------------------------------- |
+| `sales_transactions.csv`  | Analyze sales transactions and revenue    |
+| `customer_master.csv`     | Study customer information and behavior   |
+| `sku_master.csv`          | Analyze product and SKU information       |
+| `store_master.csv`        | Understand store-level information        |
+| `inventory_snapshot.csv`  | Analyze inventory levels and availability |
+| `promotions.csv`          | Study promotional activities              |
+| `sku_inventory_flags.csv` | Support inventory-related analysis        |
 
 Dataset availability and column names may vary depending on the local data files.
 
@@ -78,36 +88,43 @@ Dataset availability and column names may vary depending on the local data files
 ### Week 1: Data Preparation and Baseline Models
 
 **Day 1 – Project Setup**
+
 - Understand the project objectives and requirements.
 - Review the project workflow and available datasets.
 - Set up the development environment and project folders.
 
 **Day 2 – Data Understanding**
+
 - Load the available retail datasets.
 - Inspect dataset dimensions, column names, and data types.
 - Identify important relationships between sales, customers, products, and inventory.
 
 **Day 3 – Data Cleaning and Preprocessing**
+
 - Handle missing values and inconsistent records.
 - Check for duplicate records.
 - Prepare cleaned datasets for analysis and modeling.
 
 **Day 4 – Exploratory Data Analysis (EDA)**
+
 - Analyze sales and revenue trends.
 - Explore product and store performance.
 - Study time-series patterns and relevant business insights.
 
 **Day 5 – Customer Analytics**
+
 - Perform RFM (Recency, Frequency, Monetary) analysis.
 - Apply customer segmentation techniques.
 - Summarize customer groups and purchasing behavior.
 
 **Day 6 – Baseline Demand Forecasting**
+
 - Prepare time-series data for forecasting.
 - Experiment with Prophet and LSTM models.
 - Evaluate model performance using suitable metrics.
 
 **Day 7 – Week 1 Checkpoint**
+
 - Prepare the EDA report.
 - Save cleaned and processed datasets.
 - Log baseline model experiments using MLflow.
@@ -116,36 +133,43 @@ Dataset availability and column names may vary depending on the local data files
 ### Week 2: Advanced Analytics and Automation
 
 **Day 8 – Forecasting Improvements**
+
 - Explore improvements to demand forecasting.
 - Compare forecasting approaches using consistent evaluation metrics.
 - Record relevant model results.
 
 **Day 9 – Customer Churn Analysis**
+
 - Prepare data for customer churn prediction.
 - Explore an XGBoost-based predictive workflow.
 - Use SHAP to interpret model predictions where applicable.
 
 **Day 10 – Inventory Optimization**
+
 - Analyze inventory availability and stock levels.
 - Identify potential stockout and overstock risks.
 - Develop inventory-related indicators to support planning.
 
 **Day 11 – Model Tuning and Evaluation**
+
 - Evaluate model configurations.
 - Apply hyperparameter tuning where appropriate.
 - Compare results and record model performance.
 
 **Day 12 – Data Validation and Reporting**
+
 - Add data and model validation checks.
 - Review evaluation results and potential issues.
 - Prepare validation reports and supporting outputs.
 
 **Day 13 – Workflow Automation with Apache Airflow**
+
 - Configure an Airflow DAG for the retraining workflow.
 - Organize workflow tasks and dependencies.
 - Validate the DAG configuration and execution where the environment permits.
 
 **Day 14 – Week 2 Checkpoint**
+
 - Review customer analytics and forecasting workflows.
 - Review inventory analysis and automation.
 - Document completed work and outstanding issues.
@@ -153,36 +177,43 @@ Dataset availability and column names may vary depending on the local data files
 ### Week 3: Dashboard and Application Development
 
 **Day 15 – Dashboard Foundation**
+
 - Set up the Streamlit application.
 - Organize the application structure and navigation.
 - Prepare reusable components where appropriate.
 
 **Day 16 – Sales Analytics Dashboard**
+
 - Display sales trends and key performance indicators.
 - Present product and store performance.
 - Add relevant charts and summary metrics.
 
 **Day 17 – Demand Forecasting Dashboard**
+
 - Present historical demand and forecast results.
 - Display model evaluation metrics.
 - Improve the readability of forecasting visualizations.
 
 **Day 18 – Customer Segmentation Dashboard**
+
 - Display customer segments and RFM insights.
 - Summarize customer behavior.
 - Present relevant charts and segment-level information.
 
 **Day 19 – Inventory Optimization Dashboard**
+
 - Display inventory-related indicators.
 - Present stock availability and potential risks.
 - Organize inventory insights for easier interpretation.
 
 **Day 20 – Dashboard Integration**
+
 - Connect the available analytics pages.
 - Integrate processed data and model outputs.
 - Review navigation and consistency across pages.
 
 **Day 21 – Application Review**
+
 - Review dashboard functionality.
 - Check data loading and visualizations.
 - Improve usability and resolve identified issues.
@@ -190,38 +221,44 @@ Dataset availability and column names may vary depending on the local data files
 ### Week 4: Containerization, Cloud Deployment, Monitoring, and Final Delivery
 
 **Day 22 – Docker Multi-Stage Build**
+
 - Create or refine a multi-stage Dockerfile.
 - Separate build-time and runtime dependencies where appropriate.
 - Build and validate the Docker image.
 
 **Day 23 – Kubernetes Deployment**
+
 - Prepare Kubernetes Deployment and Service manifests.
 - Configure application container settings.
 - Validate Kubernetes configuration and deployment where a suitable cluster is available.
 
 **Day 24 – GitHub Actions CI/CD**
+
 - Configure a GitHub Actions workflow.
 - Automate Python syntax checks and relevant validation steps.
 - Verify workflow execution on GitHub Actions.
 
-**Day 25 – Cloud Deployment on AWS or GCP**
-- Select a suitable cloud platform: Amazon Web Services (AWS) or Google Cloud Platform (GCP).
-- Prepare the application and deployment configuration for the selected platform.
-- Deploy the RetailPulse application.
-- Verify application accessibility and deployment functionality.
+**Day 25 – Cloud Deployment**
+
+- Prepare the application for cloud deployment.
+- Deploy the RetailPulse dashboard to Streamlit Community Cloud.
+- Verify application accessibility and dashboard functionality.
 
 **Day 26 – Monitoring Setup with Prometheus and Grafana**
-- Set up Prometheus to collect relevant application or infrastructure metrics.
-- Configure Grafana dashboards to visualize monitoring data.
+
+- Work on monitoring configuration for relevant application or infrastructure metrics.
+- Configure Grafana dashboards where applicable.
 - Review available metrics and identify performance issues.
 
 **Day 27 – Load Testing and Model Accuracy Validation**
+
 - Perform load testing to evaluate application performance under different workloads.
 - Review response times, resource usage, and errors.
-- Validate demand forecasting model accuracy using appropriate metrics such as MAE, RMSE, and MAPE.
+- Validate demand forecasting model accuracy using metrics such as MAE, RMSE, and MAPE.
 - Document test results and identified issues.
 
 **Day 28 – Final QA, README Polishing, Demo Video, and PDF Export**
+
 - Perform final quality assurance (QA) across the project.
 - Review the application, dashboard, and available outputs.
 - Polish the README documentation.
@@ -277,7 +314,7 @@ python -m venv .venv
 Activate it on Windows PowerShell:
 
 ```powershell
-.venv\Scripts\Activate.ps1
+.\.venv\Scripts\Activate.ps1
 ```
 
 ### 3. Install Dependencies
@@ -289,6 +326,8 @@ pip install -r requirements.txt
 Make sure the required Python version and dependencies are compatible with the project environment.
 
 ### 4. Run the Streamlit Dashboard
+
+If `dashboard/app.py` is the application's entry-point file, run:
 
 ```bash
 streamlit run dashboard/app.py
@@ -302,13 +341,11 @@ The GitHub Actions workflow is located at:
 
 `.github/workflows/ci-cd.yml`
 
-The configured workflow checks out the repository, sets up Python, installs dependencies when configured, and performs Python syntax checks.
+The configured workflow can check out the repository, set up Python, install dependencies, and perform configured validation steps.
 
 A successful CI workflow confirms that the configured checks passed. It does not, by itself, confirm cloud deployment or production readiness.
 
 ## Project Deliverables
-
-The planned project deliverables include:
 
 - Cleaned retail datasets and EDA report.
 - Customer RFM analysis and segmentation results.
@@ -320,26 +357,24 @@ The planned project deliverables include:
 - Docker multi-stage build.
 - Kubernetes deployment and service manifests.
 - GitHub Actions CI/CD workflow.
-- Cloud deployment on AWS or GCP.
-- Prometheus and Grafana monitoring setup.
+- Cloud deployment on Streamlit Community Cloud.
+- Prometheus and Grafana monitoring configuration, where implemented.
 - Load testing and model accuracy validation results.
 - Final polished README documentation.
 - Project demonstration video.
 - Final project report exported as PDF.
 
-## Project Status
+## Project Links
 
-RetailPulse is being developed through a structured 28-day workflow. The completion status of individual tasks depends on their actual implementation and verification.
-
-The presence of configuration files does not necessarily mean that the corresponding service has been deployed, executed successfully, or tested in a production environment.
+- **Live Streamlit Dashboard:** [https://retailpulse-aoixermxuqugnpwvtchc5y.streamlit.app/](https://retailpulse-aoixermxuqugnpwvtchc5y.streamlit.app/)
+- **GitHub Repository:** [https://github.com/Milan-coder91/RetailPulse](https://github.com/Milan-coder91/RetailPulse)
 
 ## Author
 
-**Milan Kumar **
+**Milan Kumar**
 
-GitHub: [Milan-coder91](https://github.com/Milan-coder91)
-
-Project Repository: [RetailPulse on GitHub](https://github.com/Milan-coder91/RetailPulse)
+- GitHub Profile: [Milan-coder91](https://github.com/Milan-coder91)
+- Project Repository: [RetailPulse](https://github.com/Milan-coder91/RetailPulse)
 
 ## Disclaimer
 
